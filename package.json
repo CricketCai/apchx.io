@@ -1,0 +1,23 @@
+{
+  "name": "apchx.io",
+  "version": "1.0.0",
+  "description": "Helicopter Game",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CricketCai/apchx.io.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CricketCai/apchx.io/issues"
+  },
+  "homepage": "https://github.com/CricketCai/apchx.io#readme",
+  "dependencies": {
+    "ws": "^8.18.1"
+  }
+}
