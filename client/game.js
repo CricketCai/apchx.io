@@ -14,29 +14,30 @@ titleCanvas.height = window.innerHeight;
 function resizeTitleCanvas() {
     titleCanvas.width = window.innerWidth;
     titleCanvas.height = window.innerHeight;
-  }
-  
-  // Initial resize
-  resizeTitleCanvas();
-  
-  // Update canvas size on window resize
-  window.addEventListener('resize', resizeTitleCanvas);
+}
 
-const WIDTH = 800;
-const HEIGHT = 600;
+// Initial resize for title canvas
+resizeTitleCanvas();
+
+// Update title canvas size on window resize
+window.addEventListener('resize', resizeTitleCanvas);
+
+// Virtual world dimensions (fixed)
+const WORLD_WIDTH = 800;
+const WORLD_HEIGHT = 600;
 const WALL_THICKNESS = 20;
 const walls = [
-  { x: 0, y: 0, width: WIDTH, height: WALL_THICKNESS },
-  { x: 0, y: HEIGHT - WALL_THICKNESS, width: WIDTH, height: WALL_THICKNESS },
-  { x: 0, y: 0, width: WALL_THICKNESS, height: HEIGHT },
-  { x: WIDTH - WALL_THICKNESS, y: 0, width: WALL_THICKNESS, height: HEIGHT }
+  { x: 0, y: 0, width: WORLD_WIDTH, height: WALL_THICKNESS },
+  { x: 0, y: WORLD_HEIGHT - WALL_THICKNESS, width: WORLD_WIDTH, height: WALL_THICKNESS },
+  { x: 0, y: 0, width: WALL_THICKNESS, height: WORLD_HEIGHT },
+  { x: WORLD_WIDTH - WALL_THICKNESS, y: 0, width: WALL_THICKNESS, height: WORLD_HEIGHT }
 ];
 
 let player = {
-  screenX: WIDTH / 2,
-  screenY: HEIGHT / 2,
-  worldX: WIDTH / 2,
-  worldY: HEIGHT / 2,
+  screenX: 0, // Will be set by resize function
+  screenY: 0, // Will be set by resize function
+  worldX: WORLD_WIDTH / 2,
+  worldY: WORLD_HEIGHT / 2,
   size: 20,
   color: '#' + Math.floor(Math.random()*16777215).toString(16),
   username: ''
@@ -67,17 +68,13 @@ socket.onmessage = (event) => {
 };
 
 function drawTitleGrid() {
-  // Clear the entire canvas with a transparent background
   titleCtx.clearRect(0, 0, titleCanvas.width, titleCanvas.height);
-
   titleCtx.strokeStyle = '#00e043';
   titleCtx.lineWidth = 1;
 
-  // Calculate starting points based on offset
   const startX = gridOffsetX % GRID_SIZE - GRID_SIZE;
   const startY = gridOffsetY % GRID_SIZE - GRID_SIZE;
 
-  // Draw vertical lines
   for (let x = startX; x < titleCanvas.width + GRID_SIZE; x += GRID_SIZE) {
     titleCtx.beginPath();
     titleCtx.moveTo(x, 0);
@@ -85,7 +82,6 @@ function drawTitleGrid() {
     titleCtx.stroke();
   }
 
-  // Draw horizontal lines
   for (let y = startY; y < titleCanvas.height + GRID_SIZE; y += GRID_SIZE) {
     titleCtx.beginPath();
     titleCtx.moveTo(0, y);
@@ -105,31 +101,70 @@ function animateTitleGrid() {
 
 animateTitleGrid();
 
+// Function to resize game canvas and adjust scaling
+function resizeGameCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  // Calculate scale to fit world in canvas while preserving aspect ratio
+  const scaleX = canvas.width / WORLD_WIDTH;
+  const scaleY = canvas.height / WORLD_HEIGHT;
+  const scale = Math.min(scaleX, scaleY);
+
+  // Center the scaled world in the canvas
+  const offsetX = (canvas.width - WORLD_WIDTH * scale) / 2;
+  const offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
+
+  // Set player screen position (always centered in world coordinates)
+  player.screenX = offsetX + (WORLD_WIDTH / 2) * scale;
+  player.screenY = offsetY + (WORLD_HEIGHT / 2) * scale;
+
+  // Apply scaling transformation
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(scale, scale);
+}
+
+// Initial resize and add resize listener for game canvas
+resizeGameCanvas();
+window.addEventListener('resize', resizeGameCanvas);
+
 function drawWalls() {
   ctx.strokeStyle = 'black';
-  ctx.lineWidth = 2;
-  const offsetX = player.screenX - player.worldX;
-  const offsetY = player.screenY - player.worldY;
+  ctx.lineWidth = 2 / Math.min(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT);
+  const offsetX = (WORLD_WIDTH / 2) - player.worldX;
+  const offsetY = (WORLD_HEIGHT / 2) - player.worldY;
   walls.forEach(wall => {
     ctx.strokeRect(wall.x + offsetX, wall.y + offsetY, wall.width, wall.height);
   });
 }
 
 function drawPlayer() {
-  ctx.beginPath();
-  ctx.arc(player.screenX, player.screenY, player.size, 0, Math.PI * 2);
-  ctx.fillStyle = player.color;
-  ctx.fill();
-  ctx.closePath();
-
-  ctx.fillStyle = 'white';
-  ctx.font = '16px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(player.username, player.screenX, player.screenY + player.size + 20);
-}
+    ctx.beginPath();
+    ctx.arc(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, player.size, 0, Math.PI * 2);
+    ctx.fillStyle = player.color;
+    ctx.fill();
+    ctx.closePath();
+  
+    const scaleFactor = Math.min(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT);
+    ctx.font = `10px Ubuntu`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'white'; // Fill color
+    ctx.strokeStyle = 'black'; // Outline color
+    ctx.lineWidth = '2px'; // Outline thickness, scaled appropriately
+    ctx.strokeText(player.username, WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + player.size * 1.6); // Draw outline
+    ctx.fillText(player.username, WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + player.size * 1.6); // Draw fill
+  }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Clear the entire physical canvas to match body background
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity for full clear
+  ctx.fillStyle = '#f0f0f0'; // Match body background-color
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+
+  // Draw game elements in scaled world coordinates
   drawWalls();
   drawPlayer();
 }
@@ -190,7 +225,7 @@ function startGame() {
   titleScreen.style.display = 'none';
   canvas.style.display = 'block';
   
-  player.username = usernameInput.value || 'Player';
+  player.username = usernameInput.value || 'Unnamed Copter';
   socket.send(JSON.stringify({ x: player.worldX, y: player.worldY, username: player.username }));
   draw();
 
