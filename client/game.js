@@ -11,6 +11,7 @@ const settingsIcon = document.getElementById('settingsIcon');
 const settingsPopup = document.getElementById('settingsPopup');
 const popupCloseButton = document.getElementById('popupCloseButton');
 const keyboardControlsToggle = document.getElementById('keyboardControlsToggle');
+let rotorAngle = 0;
 
 // Set title canvas size to full window
 titleCanvas.width = window.innerWidth;
@@ -205,7 +206,7 @@ function drawPlayer() {
     // Center the context on the player
     ctx.translate(canvas.width / 2, canvas.height / 2);
     
-    // Draw the circle (base layer)
+    // Draw the circle (base layer) first
     ctx.beginPath();
     ctx.arc(0, 0, player.size, 0, Math.PI * 2);
     ctx.fillStyle = player.color;
@@ -221,9 +222,32 @@ function drawPlayer() {
         ctx.drawImage(playerImage, -imgWidth/2, -imgHeight/2);
         ctx.restore();
     }
+    
+    // Draw rectangular rotors
+    const rotorLength = player.size * 3;
+    const rotorWidth = player.size * 0.4;
+    const rotorCount = 3;
+    
+    ctx.save();
+    for (let i = 0; i < rotorCount; i++) {
+        ctx.save();
+        ctx.rotate(rotorAngle + (i * 2 * Math.PI / rotorCount));
+        
+        // Draw simple rectangle
+        ctx.fillStyle = 'rgba(128, 128, 128, 0.7)';
+        ctx.fillRect(0, -rotorWidth/2, rotorLength, rotorWidth);
+        
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, -rotorWidth/2, rotorLength, rotorWidth);
+        
+        ctx.restore();
+    }
     ctx.restore();
     
-    // Draw username (unrotated)
+    ctx.restore();
+    
+    // Draw username last (unrotated)
     ctx.font = '10px Ubuntu';
     ctx.textAlign = 'center';
     ctx.fillStyle = 'white';
@@ -231,7 +255,7 @@ function drawPlayer() {
     ctx.lineWidth = 2;
     ctx.strokeText(player.username, canvas.width / 2, canvas.height / 2 + player.size * 1.6);
     ctx.fillText(player.username, canvas.width / 2, canvas.height / 2 + player.size * 1.6);
-}
+}   
 
 
 
@@ -315,9 +339,8 @@ function updatePosition() {
         if (keysPressed.ArrowLeft) dx -= MOVE_SPEED;
         if (keysPressed.ArrowRight) dx += MOVE_SPEED;
     } else {
-        // Mouse movement: Move towards mouse position
         const distance = Math.sqrt(mouseX * mouseX + mouseY * mouseY);
-        if (distance > 5) { // Small deadzone to prevent jitter
+        if (distance > 5) {
             dx = (mouseX / distance) * MOVE_SPEED;
             dy = (mouseY / distance) * MOVE_SPEED;
         }
@@ -334,7 +357,6 @@ function updatePosition() {
         newWorldX = player.worldX + normalizedDx;
         newWorldY = player.worldY + normalizedDy;
         
-        // Update direction only if moving
         player.lastDx = dx;
         player.lastDy = dy;
         player.angle = Math.atan2(player.lastDy, player.lastDx);
@@ -346,6 +368,10 @@ function updatePosition() {
         socket.send(JSON.stringify({ x: player.worldX, y: player.worldY, username: player.username }));
     }
 
+    // Update rotor angle for animation
+    const rotorSpeed = 0.05;
+    rotorAngle += rotorSpeed; // Increment angle each frame
+    
     draw();
     requestAnimationFrame(updatePosition);
 }

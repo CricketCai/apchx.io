@@ -84,23 +84,6 @@ body {
 
 
 
-
-/* 
-  #settings {
-    position: relative; 
-    z-index: 6; 
-    width: 50px; 
-    height: 50px; 
-    background-color: #AAAAAA; 
-    border: 3.5px solid #8A8A8A; 
-
-  }
-
-  #settings:hover {
-    background-color: ; 
-    border: 3.5px solid ; 
-  } */
-
   #exitButton {
     position: fixed; /* Changed to fixed for visibility */
     top: 10px;
@@ -112,7 +95,7 @@ body {
     color: white;
     background-color: #ff4444;
     border: none;
-    border-radius: 50%;
+    border-radius: 5px;
     cursor: pointer;
     display: none; /* Hidden until game starts */
     z-index: 15; /* Above game canvas but below settings */
@@ -126,8 +109,10 @@ body {
     position: fixed; /* Changed to fixed to persist across screens */
     top: 10px;
     left: 10px;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
+    background-color: #AAAAAA;
+    border: 3.5px solid #8A8A8A;
     cursor: pointer;
     border-radius: 5px; 
     z-index: 20; /* Highest z-index to stay on top */
@@ -158,7 +143,7 @@ body {
     color: white;
     background-color: #ff4444;
     border: none;
-    border-radius: 50%;
+    border-radius: 5px;
     cursor: pointer;
 }
 
