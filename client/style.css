@@ -88,9 +88,105 @@ body {
 /* 
   #settings {
     position: relative; 
+    z-index: 6; 
+    width: 50px; 
+    height: 50px; 
+    background-color: #AAAAAA; 
+    border: 3.5px solid #8A8A8A; 
+
   }
 
   #settings:hover {
     background-color: ; 
     border: 3.5px solid ; 
   } */
+
+  #exitButton {
+    position: fixed; /* Changed to fixed for visibility */
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+    font-family: 'Ubuntu', sans-serif;
+    color: white;
+    background-color: #ff4444;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none; /* Hidden until game starts */
+    z-index: 15; /* Above game canvas but below settings */
+}
+
+#exitButton:hover {
+    background-color: #cc0000;
+}
+
+#settingsIcon {
+    position: fixed; /* Changed to fixed to persist across screens */
+    top: 10px;
+    left: 10px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    border-radius: 5px; 
+    z-index: 20; /* Highest z-index to stay on top */
+}
+
+.popup {
+    display: none;
+    position: fixed;
+    top: 100px;
+    left: 130px;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 2px solid #00e043;
+    border-radius: 10px;
+    z-index: 25; /* Above everything */
+}
+
+#popupCloseButton {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    font-size: 16px;
+    font-family: 'Ubuntu', sans-serif;
+    color: white;
+    background-color: #ff4444;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#popupCloseButton:hover {
+    background-color: #cc0000;
+}
+
+.popup-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.toggle-box {
+    width: 20px;
+    height: 20px;
+    background-color: white; /* On by default */
+    border: 2px solid #00e043;
+    cursor: pointer;
+}
+
+.toggle-box.off {
+    background-color: gray; /* Off state */
+}
+
+.toggle-description {
+    color: white;
+    font-family: 'Ubuntu';
+    font-size: 13px;
+}
