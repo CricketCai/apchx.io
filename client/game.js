@@ -6,6 +6,11 @@ const usernameInput = document.getElementById('username');
 const socket = new WebSocket('ws://localhost:8080');
 const titleCanvas = document.getElementById('titleCanvas');
 const titleCtx = titleCanvas.getContext('2d');
+const exitButton = document.getElementById('exitButton');
+const settingsIcon = document.getElementById('settingsIcon');
+const settingsPopup = document.getElementById('settingsPopup');
+const popupCloseButton = document.getElementById('popupCloseButton');
+const keyboardControlsToggle = document.getElementById('keyboardControlsToggle');
 
 // Set title canvas size to full window
 titleCanvas.width = window.innerWidth;
@@ -21,6 +26,58 @@ resizeTitleCanvas();
 
 // Update title canvas size on window resize
 window.addEventListener('resize', resizeTitleCanvas);
+
+
+let useKeyboardControls = true; // On by default
+let mouseX = 0;
+let mouseY = 0;
+
+playButton.addEventListener('click', startGame);
+
+// Mouse movement listener
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left - canvas.width / 2;
+    mouseY = e.clientY - rect.top - canvas.height / 2;
+});
+
+// Settings popup toggle
+function toggleSettingsPopup() {
+    if (settingsPopup.style.display === 'block') {
+        settingsPopup.style.display = 'none';
+    } else {
+        settingsPopup.style.display = 'block';
+    }
+}
+
+// Close popup when clicking outside
+document.addEventListener('click', (e) => {
+    if (settingsPopup.style.display === 'block' && 
+        !settingsPopup.contains(e.target) && 
+        e.target !== settingsIcon) {
+        settingsPopup.style.display = 'none';
+    }
+});
+
+// Toggle keyboard/mouse controls
+keyboardControlsToggle.addEventListener('click', () => {
+    useKeyboardControls = !useKeyboardControls;
+    keyboardControlsToggle.classList.toggle('off', !useKeyboardControls);
+});
+
+// Event listeners for settings and close
+settingsIcon.addEventListener('click', toggleSettingsPopup);
+popupCloseButton.addEventListener('click', () => {
+    settingsPopup.style.display = 'none';
+});
+
+// ESC key to toggle popup
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        toggleSettingsPopup();
+    }
+});
+
 
 // Virtual world dimensions (fixed)
 const WORLD_WIDTH = 8000; 
@@ -46,14 +103,28 @@ mapImage.onerror = function() {
     console.error('Failed to load map.png');
 };
 
+const playerImage = new Image();
+playerImage.src = 'assets/copter v2.svg'; // Adjust path as needed
+let playerImageLoaded = false;
+playerImage.onload = function() {
+    playerImageLoaded = true;
+    console.log('copter v2.svg loaded');
+};
+playerImage.onerror = function() {
+    console.error('Failed to load copter v2.svg');
+};
+
 let player = {
     screenX: window.innerWidth / 2,
     screenY: window.innerHeight / 2,
     worldX: WORLD_WIDTH - (WORLD_WIDTH - 100),
     worldY: WORLD_HEIGHT / 2,
-    size: 20,
+    size: 20, //strangely scales proportionately with speed 
     color: '#' + Math.floor(Math.random()*16777215).toString(16),
-    username: ''
+    username: '',
+    angle: 0, // Add angle property to track direction
+    lastDx: 0, // Track last movement direction
+    lastDy: 0
 };
 
 const keysPressed = {
@@ -129,12 +200,30 @@ window.addEventListener('resize', resizeGameCanvas);
 // Removed drawWalls function since walls are now invisible
 
 function drawPlayer() {
+    ctx.save();
+    
+    // Center the context on the player
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    
+    // Draw the circle (base layer)
     ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2, player.size, 0, Math.PI * 2);
+    ctx.arc(0, 0, player.size, 0, Math.PI * 2);
     ctx.fillStyle = player.color;
     ctx.fill();
     ctx.closePath();
     
+    // Draw the SVG image over the circle with rotation
+    if (playerImageLoaded) {
+        ctx.save();
+        ctx.rotate(player.angle);
+        const imgWidth = playerImage.width;
+        const imgHeight = playerImage.height;
+        ctx.drawImage(playerImage, -imgWidth/2, -imgHeight/2);
+        ctx.restore();
+    }
+    ctx.restore();
+    
+    // Draw username (unrotated)
     ctx.font = '10px Ubuntu';
     ctx.textAlign = 'center';
     ctx.fillStyle = 'white';
@@ -143,6 +232,7 @@ function drawPlayer() {
     ctx.strokeText(player.username, canvas.width / 2, canvas.height / 2 + player.size * 1.6);
     ctx.fillText(player.username, canvas.width / 2, canvas.height / 2 + player.size * 1.6);
 }
+
 
 
 function draw() {
@@ -186,8 +276,8 @@ function draw() {
                  BACKGROUND_EXTENSION, WORLD_HEIGHT+0.2);
 
     // Right overlay (right of playable area)
-    ctx.fillRect(WORLD_WIDTH, 0, 
-                 BACKGROUND_EXTENSION, WORLD_HEIGHT);
+    ctx.fillRect(WORLD_WIDTH, -0.1, 
+                 BACKGROUND_EXTENSION, WORLD_HEIGHT+0.2);
 
     ctx.restore();
 
@@ -219,13 +309,23 @@ function updatePosition() {
     let dx = 0;
     let dy = 0;
 
-    if (keysPressed.ArrowUp) dy -= MOVE_SPEED;
-    if (keysPressed.ArrowDown) dy += MOVE_SPEED;
-    if (keysPressed.ArrowLeft) dx -= MOVE_SPEED;
-    if (keysPressed.ArrowRight) dx += MOVE_SPEED;
+    if (useKeyboardControls) {
+        if (keysPressed.ArrowUp) dy -= MOVE_SPEED;
+        if (keysPressed.ArrowDown) dy += MOVE_SPEED;
+        if (keysPressed.ArrowLeft) dx -= MOVE_SPEED;
+        if (keysPressed.ArrowRight) dx += MOVE_SPEED;
+    } else {
+        // Mouse movement: Move towards mouse position
+        const distance = Math.sqrt(mouseX * mouseX + mouseY * mouseY);
+        if (distance > 5) { // Small deadzone to prevent jitter
+            dx = (mouseX / distance) * MOVE_SPEED;
+            dy = (mouseY / distance) * MOVE_SPEED;
+        }
+    }
 
     let newWorldX = player.worldX;
     let newWorldY = player.worldY;
+    
     if (dx !== 0 || dy !== 0) {
         const magnitude = Math.sqrt(dx * dx + dy * dy);
         const normalizedDx = (dx / magnitude) * MOVE_SPEED;
@@ -233,6 +333,11 @@ function updatePosition() {
         
         newWorldX = player.worldX + normalizedDx;
         newWorldY = player.worldY + normalizedDy;
+        
+        // Update direction only if moving
+        player.lastDx = dx;
+        player.lastDy = dy;
+        player.angle = Math.atan2(player.lastDy, player.lastDx);
     }
 
     if (!checkCollision(newWorldX, newWorldY)) {
@@ -248,6 +353,7 @@ function updatePosition() {
 function startGame() {
     titleScreen.style.display = 'none';
     canvas.style.display = 'block';
+    exitButton.style.display = 'block'; // Show exit button
     
     player.username = usernameInput.value || 'Unnamed Copter';
     socket.send(JSON.stringify({ x: player.worldX, y: player.worldY, username: player.username }));
@@ -267,3 +373,13 @@ function startGame() {
 
     requestAnimationFrame(updatePosition);
 }
+
+function exitGame() {
+    canvas.style.display = 'none';
+    exitButton.style.display = 'none'; // Hide exit button
+    titleScreen.style.display = 'flex'; // Show title screen again
+    animateTitleGrid(); // Restart title animation
+}
+
+// Add event listeners
+exitButton.addEventListener('click', exitGame);
